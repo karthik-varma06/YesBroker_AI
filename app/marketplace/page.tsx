@@ -524,7 +524,7 @@ export default function MarketplacePage() {
                 transition={{ delay: 0.2 }}
                 className="grid grid-cols-4 gap-3 shrink-0"
               >
-                {[].map((s, i) => (
+                {([] as any[]).map((s, i) => (
                   <div
                     key={i}
                     className="flex flex-col items-center text-center p-3 rounded-2xl"

@@ -69,8 +69,6 @@ function FloatingStatusCard({
               ? "hover:shadow-[0_0_30px_rgba(167,139,250,0.6)]"
               : "hover:shadow-[0_0_30px_rgba(16,185,129,0.6)]"
       }`}
-      transition={{ delay, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className={`floating-card ${accent}-accent ${animClass} select-none`}
       style={{ minWidth: 160 }}
     >
       <div className="flex items-center gap-2.5">

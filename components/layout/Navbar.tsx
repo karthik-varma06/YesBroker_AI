@@ -17,7 +17,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 
-const navItems = [
+const navItems: { label: string; href: string; icon: any; sub?: string }[] = [
   { label: "Home", href: "/", icon: Home },
   { label: "Marketplace", href: "/marketplace", icon: Building2 },
   { label: "Voice AI", href: "/voice-agent", icon: Phone },
