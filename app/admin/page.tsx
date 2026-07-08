@@ -55,7 +55,7 @@ export default function AdminPage() {
         </motion.div>
 
         {/* System Status */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Vapi Voice AI', status: 'online', icon: Zap },
             { label: 'n8n Workflows', status: 'online', icon: Activity },
@@ -74,7 +74,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           {[['overview','Overview'],['users','User Management'],['logs','Activity Logs']].map(([key, label]) => (
             <button key={key} onClick={() => setActiveTab(key as any)}
               className={`text-sm px-4 py-2.5 rounded-xl transition-all font-medium ${activeTab === key ? 'bg-champagne-500 text-obsidian-900' : 'glass border border-champagne-500/10 text-gray-400 hover:text-ivory-100'}`}>
@@ -109,7 +109,7 @@ export default function AdminPage() {
             {/* Quick Actions */}
             <div className="glass rounded-2xl p-6 border border-champagne-500/10">
               <h3 className="text-sm font-medium text-ivory-100 mb-5 flex items-center gap-2"><Settings className="w-4 h-4 text-champagne-400" />Quick Actions</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                   { label: 'Add Property', color: 'bg-champagne-500/10 text-champagne-400 border-champagne-500/20', icon: Building2 },
                   { label: 'Add Agent', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20', icon: Users },

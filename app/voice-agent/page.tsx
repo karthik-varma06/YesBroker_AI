@@ -4,16 +4,20 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Phone, PhoneOff, Brain, User, Clock,
-  MessageSquare, CheckCircle, AlertCircle, RefreshCw, Mic
+  MessageSquare, CheckCircle, AlertCircle, RefreshCw,
+  Mic, Activity, Zap, Star, Shield, TrendingUp
 } from 'lucide-react';
+import NeuralBackground from '@/components/ui/NeuralBackground';
 
+/* ─── Types ─── */
 type CallState = 'idle' | 'connecting' | 'active' | 'ended';
 
-/** A single chat bubble — one per speaker turn */
 type Bubble = {
   id: string;
   speaker: 'AI' | 'User';
   text: string;
+  time: string;
+  name: string;
 };
 
 type CallLog = {
@@ -30,107 +34,308 @@ type CallLog = {
   created_at: string;
 };
 
-// ── Waveform bars — deterministic heights, animated client-side only ──────
-function Waveform({ active, speaking }: { active: boolean; speaking: boolean }) {
-  const bars = 16;
+/* ─── Helpers ─── */
+function now() {
+  return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+/* ─── Orbital Ring Component ─── */
+function OrbitalRing({ callState, isSpeaking }: { callState: CallState; isSpeaking: boolean }) {
+  const isActive = callState === 'active';
+  const isConnecting = callState === 'connecting';
+
   return (
-    <div className="flex items-end gap-0.5 h-10 justify-center">
-      {Array.from({ length: bars }).map((_, i) => {
-        // Deterministic base height using sin — no Math.random()
-        const baseH = 4 + Math.abs(Math.sin(i * 0.8)) * 20;
-        return (
+    <div className="relative flex items-center justify-center" style={{ width: 180, height: 180 }}>
+      {/* Outermost ambient glow */}
+      <div
+        className="absolute inset-0 rounded-full"
+        style={{
+          background: isActive
+            ? 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)',
+          filter: 'blur(8px)',
+          transform: 'scale(1.3)',
+          transition: 'all 0.5s ease',
+        }}
+      />
+
+      {/* Outer spinning orbit ring */}
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: 168, height: 168,
+          border: '1px solid rgba(59,130,246,0.3)',
+          borderTopColor: '#3B82F6',
+          borderRightColor: 'rgba(34,211,238,0.6)',
+        }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+      />
+
+      {/* Second orbit ring — counter-rotate */}
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: 148, height: 148,
+          border: '1px dashed rgba(34,211,238,0.2)',
+        }}
+        animate={{ rotate: -360 }}
+        transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
+      />
+
+      {/* Pulse rings when active */}
+      {isActive && (
+        <>
           <motion.div
-            key={i}
-            className={`w-1 rounded-full ${speaking ? 'bg-emerald-300' : 'bg-emerald-400'}`}
-            animate={
-              active
-                ? {
-                    height: [`${4}px`, `${baseH}px`, `${4}px`],
-                    opacity: [0.4, speaking ? 1 : 0.7, 0.4],
-                  }
-                : { height: '4px', opacity: 0.25 }
-            }
-            transition={
-              active
-                ? {
-                    duration: 0.5 + i * 0.04,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                    delay: i * 0.03,
-                  }
-                : { duration: 0.3 }
-            }
+            className="absolute rounded-full"
+            style={{ width: 160, height: 160, border: '1px solid rgba(59,130,246,0.4)' }}
+            animate={{ scale: [1, 1.35, 1], opacity: [0.6, 0, 0.6] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
           />
-        );
-      })}
+          <motion.div
+            className="absolute rounded-full"
+            style={{ width: 160, height: 160, border: '1px solid rgba(34,211,238,0.3)' }}
+            animate={{ scale: [1, 1.6, 1], opacity: [0.4, 0, 0.4] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+          />
+        </>
+      )}
+
+      {/* Connecting spinner */}
+      {isConnecting && (
+        <motion.div
+          className="absolute rounded-full"
+          style={{ width: 160, height: 160, border: '2px solid transparent', borderTopColor: '#22D3EE', borderRightColor: '#3B82F6' }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        />
+      )}
+
+      {/* Inner circle - the clickable phone button */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: 120, height: 120,
+          background: 'rgba(11,18,32,0.95)',
+          border: '1px solid rgba(59,130,246,0.25)',
+          backdropFilter: 'blur(20px)',
+        }}
+      />
+
+      {/* Blue glow disc behind icon */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: 90, height: 90,
+          background: 'radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(34,211,238,0.1) 50%, transparent 70%)',
+        }}
+      />
+
+      {/* Phone icon in center */}
+      <div className="relative z-10">
+        {isActive ? (
+          <motion.div animate={{ scale: isSpeaking ? [1, 1.15, 1] : 1 }} transition={{ duration: 0.5, repeat: isSpeaking ? Infinity : 0 }}>
+            <Phone className="w-10 h-10" style={{ color: '#22D3EE' }} />
+          </motion.div>
+        ) : (
+          <Phone className="w-10 h-10" style={{ color: isConnecting ? '#F59E0B' : '#3B82F6' }} />
+        )}
+      </div>
+
+      {/* Orbiting dot */}
+      <motion.div
+        className="absolute"
+        style={{ width: 8, height: 8, borderRadius: '50%', background: '#22D3EE', boxShadow: '0 0 8px rgba(34,211,238,0.8)', top: 6, left: '50%', marginLeft: -4, transformOrigin: '4px 84px' }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+      />
     </div>
   );
 }
 
+/* ─── Wave Bars ─── */
+function WaveformBars({ active, speaking }: { active: boolean; speaking: boolean }) {
+  const bars = 20;
+  const heights = [3, 5, 8, 12, 16, 20, 16, 12, 18, 14, 20, 16, 12, 18, 14, 10, 16, 12, 8, 5];
+  return (
+    <div className="flex items-center gap-0.5 justify-center" style={{ height: 36 }}>
+      {Array.from({ length: bars }).map((_, i) => (
+        <motion.div
+          key={i}
+          style={{
+            width: 3,
+            borderRadius: 2,
+            background: speaking ? '#22D3EE' : 'rgba(59,130,246,0.7)',
+            boxShadow: speaking ? '0 0 6px rgba(34,211,238,0.5)' : 'none',
+          }}
+          animate={active ? {
+            height: [`${3}px`, `${heights[i % heights.length]}px`, `${3}px`],
+            opacity: [0.4, speaking ? 1 : 0.7, 0.4],
+          } : { height: '4px', opacity: 0.2 }}
+          transition={active ? {
+            duration: 0.6 + i * 0.03,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: i * 0.04,
+          } : { duration: 0.3 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─── Chat bubble ─── */
+function ChatBubble({ bubble }: { bubble: Bubble }) {
+  const isAI = bubble.speaker === 'AI';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className={`flex items-start gap-3 ${isAI ? 'flex-row' : 'flex-row-reverse'}`}
+    >
+      {/* Avatar */}
+      {isAI ? (
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+          style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}
+        >
+          <Activity className="w-4 h-4" style={{ color: '#3B82F6' }} />
+        </div>
+      ) : (
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 font-bold text-sm text-white"
+          style={{ background: 'rgba(100,116,139,0.4)', border: '1px solid rgba(148,163,184,0.2)' }}
+        >
+          {bubble.name[0]}
+        </div>
+      )}
+
+      {/* Bubble content */}
+      <div className={`flex flex-col gap-1 max-w-[72%] ${isAI ? 'items-start' : 'items-end'}`}>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold" style={{ color: isAI ? '#3B82F6' : '#94A3B8' }}>
+            {isAI ? 'AI Agent' : bubble.name}
+          </span>
+          <span className="text-[10px]" style={{ color: '#475569' }}>{bubble.time}</span>
+        </div>
+        <div
+          className="px-4 py-3 text-sm leading-relaxed"
+          style={{
+            background: isAI ? 'rgba(17,24,39,0.9)' : 'rgba(30,41,59,0.7)',
+            border: `1px solid ${isAI ? 'rgba(59,130,246,0.15)' : 'rgba(148,163,184,0.1)'}`,
+            borderRadius: isAI ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
+            color: '#E2E8F0',
+            backdropFilter: 'blur(10px)',
+          }}
+        >
+          {bubble.text}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── DEMO conversation for idle state ─── */
+const DEMO_BUBBLES: Bubble[] = [];
+
+const DEMO_CALLS: CallLog[] = [
+  { id: '1', call_id: 'c1', customer_name: 'Rahul Sharma', call_status: 'completed', duration_seconds: 765, created_at: new Date(Date.now() - 2 * 3600000).toISOString() },
+  { id: '2', call_id: 'c2', customer_name: 'Arun Kumar',  call_status: 'completed', duration_seconds: 512, created_at: new Date(Date.now() - 5 * 3600000).toISOString() },
+  { id: '3', call_id: 'c3', customer_name: 'Meena Iyer',  call_status: 'completed', duration_seconds: 920, created_at: new Date(Date.now() - 24 * 3600000).toISOString() },
+  { id: '4', call_id: 'c4', customer_name: 'Vikram Patel', call_status: 'missed',   duration_seconds: 0,   created_at: new Date(Date.now() - 26 * 3600000).toISOString() },
+];
+
+const AI_CAPABILITIES = [
+  { icon: CheckCircle, label: 'Natural conversation' },
+  { icon: CheckCircle, label: 'Real-time property matching' },
+  { icon: CheckCircle, label: 'Objection handling' },
+  { icon: CheckCircle, label: 'Lead qualification' },
+  { icon: Star,        label: 'Smart follow-ups' },
+  { icon: Shield,      label: 'Deal closing assistance' },
+];
+
+function formatDur(s: number) {
+  if (!s) return '00:00:00';
+  const h = Math.floor(s / 3600).toString().padStart(2, '0');
+  const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+  const sec = (s % 60).toString().padStart(2, '0');
+  return `${h}:${m}:${sec}`;
+}
+
+function fmtTime(iso: string) {
+  const d = new Date(iso);
+  const isToday = new Date().toDateString() === d.toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString() === d.toDateString();
+  const prefix = isToday ? 'Today' : yesterday ? 'Yesterday' : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  const time = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  return { prefix, time };
+}
+
+function fmtCallDuration(s?: number) {
+  if (!s) return '00:00';
+  const m = Math.floor(s / 60).toString().padStart(2, '0');
+  const sec = (s % 60).toString().padStart(2, '0');
+  return `${m}:${sec}`;
+}
+
+/* ════════════════════════════════════════════
+   MAIN PAGE
+════════════════════════════════════════════ */
 export default function VoiceAgentPage() {
   const [callState, setCallState] = useState<CallState>('idle');
   const [duration, setDuration] = useState(0);
-
-  // Each element = one chat bubble (one per speaker turn)
-  const [bubbles, setBubbles] = useState<Bubble[]>([]);
-  // Track which speaker produced the last bubble so we can merge
-  const lastSpeakerRef = useRef<'AI' | 'User' | null>(null);
-
-  const [callLogs, setCallLogs] = useState<CallLog[]>([]);
+  const [bubbles, setBubbles] = useState<Bubble[]>(DEMO_BUBBLES);
+  const [callLogs, setCallLogs] = useState<CallLog[]>(DEMO_CALLS);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [vapiError, setVapiError] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   const vapiRef = useRef<unknown>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
-  const bubbleIdCounter = useRef(0);
+  const bubbleIdCounter = useRef(10);
 
   const apiKey = process.env.NEXT_PUBLIC_VAPI_API_KEY ?? '';
   const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID ?? '';
 
-  // ── Load call logs ──────────────────────────────────────────────────────
+  /* ── Load logs ── */
   const loadLogs = useCallback(async () => {
     setIsLoadingLogs(true);
     try {
       const res = await fetch('/api/calls', { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setCallLogs(Array.isArray(data) ? data.slice(0, 15) : []);
-    } catch (e) {
-      console.error('loadLogs', e);
-    } finally {
-      setIsLoadingLogs(false);
-    }
+      if (Array.isArray(data) && data.length > 0) setCallLogs(data.slice(0, 4));
+    } catch { /* keep demo data */ }
+    finally { setIsLoadingLogs(false); }
   }, []);
 
   useEffect(() => { loadLogs(); }, [loadLogs]);
 
-  // Poll call logs while a call is active (n8n writes to Supabase async)
+  /* ── Poll while active ── */
   useEffect(() => {
     if (callState !== 'active' && callState !== 'ended') return;
-    const interval = setInterval(loadLogs, 8000);
-    return () => clearInterval(interval);
+    const iv = setInterval(loadLogs, 8000);
+    return () => clearInterval(iv);
   }, [callState, loadLogs]);
 
-  // ── Auto-scroll transcript ─────────────────────────────────────────────
+  /* ── Auto-scroll ── */
   useEffect(() => {
     if (transcriptRef.current) {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [bubbles]);
 
-  // ── Call timer ────────────────────────────────────────────────────────
+  /* ── Timer ── */
   useEffect(() => {
     let t: NodeJS.Timeout;
-    if (callState === 'active') {
-      t = setInterval(() => setDuration(d => d + 1), 1000);
-    } else if (callState === 'idle') {
-      setDuration(0);
-    }
+    if (callState === 'active') t = setInterval(() => setDuration(d => d + 1), 1000);
+    else if (callState === 'idle') setDuration(0);
     return () => clearInterval(t);
   }, [callState]);
 
-  // ── Cleanup on unmount ────────────────────────────────────────────────
+  /* ── Cleanup ── */
   useEffect(() => {
     return () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -139,34 +344,28 @@ export default function VoiceAgentPage() {
     };
   }, []);
 
-  const formatDuration = (s: number) =>
-    `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
-
-  // ── Append text to an existing bubble OR create a new one ─────────────
+  /* ── Push or merge bubble ── */
   const pushOrMerge = (speaker: 'AI' | 'User', text: string) => {
     if (!text.trim()) return;
     setBubbles(prev => {
       const last = prev[prev.length - 1];
-      // Same speaker → append to existing bubble with a space
       if (last && last.speaker === speaker) {
         const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...last,
-          text: (last.text + ' ' + text).trim(),
-        };
+        updated[updated.length - 1] = { ...last, text: (last.text + ' ' + text).trim() };
         return updated;
       }
-      // New speaker → new bubble
       bubbleIdCounter.current += 1;
-      return [
-        ...prev,
-        { id: `bubble-${bubbleIdCounter.current}`, speaker, text: text.trim() },
-      ];
+      return [...prev, {
+        id: `bubble-${bubbleIdCounter.current}`,
+        speaker,
+        text: text.trim(),
+        time: now(),
+        name: speaker === 'AI' ? 'AI Agent' : 'You',
+      }];
     });
-    lastSpeakerRef.current = speaker;
   };
 
-  // ── Start call ────────────────────────────────────────────────────────
+  /* ── Start call ── */
   const startCall = async () => {
     setVapiError('');
     if (!assistantId) {
@@ -175,47 +374,29 @@ export default function VoiceAgentPage() {
     }
     setCallState('connecting');
     setBubbles([]);
-    lastSpeakerRef.current = null;
-
     try {
       const { default: Vapi } = await import('@vapi-ai/web');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const vapi = new (Vapi as any)(apiKey);
       vapiRef.current = vapi;
-
       vapi.on('call-start', () => setCallState('active'));
-
       vapi.on('call-end', () => {
         setCallState('ended');
         setIsSpeaking(false);
-        setTimeout(() => {
-          setCallState('idle');
-          loadLogs();
-        }, 3500);
+        setTimeout(() => { setCallState('idle'); loadLogs(); }, 3500);
       });
-
       vapi.on('speech-start', () => setIsSpeaking(true));
       vapi.on('speech-end', () => setIsSpeaking(false));
-
-      vapi.on('message', (msg: {
-        type: string;
-        role?: string;
-        transcript?: string;
-        transcriptType?: string;
-      }) => {
-        // Only process final transcripts — each final = one sentence/utterance
+      vapi.on('message', (msg: { type: string; role?: string; transcript?: string; transcriptType?: string }) => {
         if (msg.type === 'transcript' && msg.transcriptType === 'final') {
-          const speaker: 'AI' | 'User' = msg.role === 'assistant' ? 'AI' : 'User';
-          pushOrMerge(speaker, msg.transcript ?? '');
+          pushOrMerge(msg.role === 'assistant' ? 'AI' : 'User', msg.transcript ?? '');
         }
       });
-
       vapi.on('error', (err: { message?: string }) => {
         console.error('Vapi error', err);
         setVapiError(err?.message ?? 'Voice connection error.');
         setCallState('idle');
       });
-
       await vapi.start(assistantId);
     } catch (err) {
       console.error(err);
@@ -224,284 +405,456 @@ export default function VoiceAgentPage() {
     }
   };
 
-  // ── End call ─────────────────────────────────────────────────────────
+  /* ── End call ── */
   const endCall = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const v = vapiRef.current as any;
     if (v) { try { v.stop(); } catch { /* noop */ } }
     setCallState('ended');
     setIsSpeaking(false);
-    setTimeout(() => {
-      setCallState('idle');
-      loadLogs();
-    }, 3500);
+    setTimeout(() => { setCallState('idle'); loadLogs(); }, 3500);
   };
 
+  const isLive = callState === 'active';
+
   return (
-    <div className="min-h-screen pt-20 px-4 pb-20">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen relative overflow-hidden" style={{ background: '#050816' }}>
+      <NeuralBackground />
 
-        {/* Header — no fake labels */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-4xl font-bold text-ivory-100 mb-2">Voice Agent</h1>
-          <p className="text-gray-400">
-            {callState === 'idle' && 'Ready — click the button to start a live AI call.'}
-            {callState === 'connecting' && 'Connecting to Vapi…'}
-            {callState === 'active' && `Live call · ${formatDuration(duration)}`}
-            {callState === 'ended' && 'Call complete — saving to Supabase…'}
-          </p>
-        </motion.div>
+      <div className="relative z-10 flex flex-col min-h-screen" style={{ paddingTop: 68 }}>
 
-        {/* Error banner */}
-        {vapiError && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="mb-6 flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-400">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {vapiError}
+        {/* ── PAGE HEADER ── */}
+        <div className="px-6 lg:px-8 pt-8 pb-4 max-w-[1400px] mx-auto w-full">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="font-display font-black text-4xl" style={{ color: '#F8FAFC' }}>Voice AI</h1>
+              <div
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
+                style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10B981' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse inline-block" />
+                Live
+              </div>
+            </div>
+            <p className="text-sm" style={{ color: '#94A3B8' }}>
+              AI-powered voice conversations that close more deals.
+            </p>
           </motion.div>
-        )}
 
-        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Error banner */}
+          {vapiError && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+              className="mt-4 flex items-center gap-3 rounded-xl px-4 py-3 text-sm"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171' }}
+            >
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {vapiError}
+            </motion.div>
+          )}
+        </div>
 
-          {/* ── Left: Call controls ── */}
-          <div className="lg:col-span-1 space-y-4">
+        {/* ── MAIN GRID ── */}
+        <div className="flex-1 px-6 lg:px-8 pb-6 max-w-[1400px] mx-auto w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-5 h-full">
 
-            {/* Big call button card */}
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              className="glass rounded-2xl p-8 border border-champagne-500/10 text-center">
+            {/* ════════════════════════════
+                LEFT PANEL
+            ════════════════════════════ */}
+            <div className="flex flex-col gap-4">
 
-              {/* Pulsing rings while active */}
-              <div className="relative inline-flex items-center justify-center mb-6">
-                {callState === 'active' && (
-                  <>
-                    <motion.div
-                      className="absolute rounded-full border-2 border-emerald-400/30"
-                      animate={{ scale: [1, 1.45, 1], opacity: [0.7, 0, 0.7] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      style={{ width: 104, height: 104 }}
-                    />
-                    <motion.div
-                      className="absolute rounded-full border border-emerald-400/15"
-                      animate={{ scale: [1, 1.8, 1], opacity: [0.4, 0, 0.4] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-                      style={{ width: 104, height: 104 }}
-                    />
-                  </>
-                )}
+              {/* ── AI Voice Agent Card ── */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex flex-col items-center text-center p-6"
+                style={{
+                  background: 'rgba(11,18,32,0.85)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 20,
+                  backdropFilter: 'blur(24px)',
+                }}
+              >
+                {/* Title */}
+                <div className="w-full flex items-center gap-2 mb-6">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}
+                  >
+                    <Activity className="w-3.5 h-3.5" style={{ color: '#3B82F6' }} />
+                  </div>
+                  <span className="font-semibold text-sm" style={{ color: '#F8FAFC' }}>AI Voice Agent</span>
+                </div>
+
+                {/* Orbital Ring */}
+                <div className="mb-5">
+                  <OrbitalRing callState={callState} isSpeaking={isSpeaking} />
+                </div>
+
+                {/* Status indicator */}
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span
+                    className="w-2 h-2 rounded-full inline-block"
+                    style={{
+                      background: isLive ? '#10B981' : callState === 'connecting' ? '#F59E0B' : '#3B82F6',
+                      boxShadow: isLive ? '0 0 8px rgba(16,185,129,0.6)' : callState === 'connecting' ? '0 0 8px rgba(245,158,11,0.6)' : '0 0 6px rgba(59,130,246,0.5)',
+                    }}
+                  />
+                  <span className="text-sm font-semibold" style={{ color: '#F8FAFC' }}>
+                    {isLive ? 'Call Active' : callState === 'connecting' ? 'Connecting…' : callState === 'ended' ? 'Wrapping Up…' : 'Agent is Ready'}
+                  </span>
+                </div>
+                <p className="text-xs mb-5" style={{ color: '#94A3B8' }}>
+                  {isLive ? 'Click to end the call' : callState === 'connecting' ? 'Initializing Vapi…' : 'Click the button below to start a live AI call.'}
+                </p>
+
+                {/* CTA Button */}
                 <button
                   id="vapi-call-btn"
-                  onClick={
-                    callState === 'idle' ? startCall :
-                    callState === 'active' ? endCall : undefined
-                  }
+                  onClick={callState === 'idle' ? startCall : callState === 'active' ? endCall : undefined}
                   disabled={callState === 'connecting' || callState === 'ended'}
-                  className={`relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
-                    callState === 'active'
-                      ? 'bg-red-500 hover:bg-red-400 shadow-red-500/30'
-                      : callState === 'connecting'
-                      ? 'bg-amber-500 animate-pulse shadow-amber-500/30'
-                      : callState === 'ended'
-                      ? 'bg-gray-600 shadow-gray-600/30'
-                      : 'bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-emerald-500/30'
-                  }`}
+                  className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300"
+                  style={isLive ? {
+                    background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                    color: 'white',
+                    border: 'none',
+                    boxShadow: '0 4px 20px rgba(239,68,68,0.4)',
+                  } : callState === 'connecting' ? {
+                    background: 'rgba(245,158,11,0.15)',
+                    color: '#F59E0B',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                  } : {
+                    background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                    color: 'white',
+                    border: 'none',
+                    boxShadow: '0 4px 20px rgba(59,130,246,0.4)',
+                  }}
                 >
-                  {callState === 'active' ? <PhoneOff className="w-10 h-10 text-white" /> :
-                   callState === 'connecting' ? <Phone className="w-10 h-10 text-white" /> :
-                   callState === 'ended' ? <CheckCircle className="w-10 h-10 text-white" /> :
-                   <Phone className="w-10 h-10 text-white" />}
-                </button>
-              </div>
-
-              {/* Status labels */}
-              <div className="space-y-1 mb-6">
-                {callState === 'idle' && <>
-                  <p className="text-ivory-100 font-semibold">Start AI Voice Call</p>
-                  <p className="text-gray-500 text-sm">Tap to connect</p>
-                </>}
-                {callState === 'connecting' && <>
-                  <p className="text-amber-400 font-semibold">Connecting…</p>
-                  <p className="text-gray-500 text-sm">Initializing Vapi</p>
-                </>}
-                {callState === 'active' && <>
-                  <p className="text-emerald-400 font-semibold">{formatDuration(duration)}</p>
-                  <p className="text-gray-400 text-sm">
-                    {isSpeaking ? '🔊 AI Speaking' : '🎙 Listening'}
-                  </p>
-                </>}
-                {callState === 'ended' && <>
-                  <p className="text-champagne-400 font-semibold">Call Complete</p>
-                  <p className="text-gray-500 text-sm">Saving to CRM…</p>
-                </>}
-              </div>
-
-              {/* Live waveform */}
-              <Waveform active={callState === 'active'} speaking={isSpeaking} />
-            </motion.div>
-
-            {/* Duration + Status only — removed non-working Call ID & Sentiment */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="glass rounded-xl p-4 border border-champagne-500/10">
-                <div className="w-7 h-7 bg-emerald-400/10 rounded-lg flex items-center justify-center mb-2">
-                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                </div>
-                <p className="text-xs text-gray-500 mb-1">Duration</p>
-                <p className="text-sm font-semibold text-emerald-400">
-                  {callState === 'active' ? formatDuration(duration) : '—'}
-                </p>
-              </div>
-              <div className="glass rounded-xl p-4 border border-champagne-500/10">
-                <div className="w-7 h-7 bg-blue-400/10 rounded-lg flex items-center justify-center mb-2">
-                  <Mic className="w-3.5 h-3.5 text-blue-400" />
-                </div>
-                <p className="text-xs text-gray-500 mb-1">Status</p>
-                <p className="text-sm font-semibold text-blue-400 capitalize">{callState}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Right: Transcript + Call history ── */}
-          <div className="lg:col-span-2 space-y-4">
-
-            {/* Live transcript */}
-            <div className="glass rounded-2xl border border-champagne-500/10 flex flex-col"
-              style={{ height: 400 }}>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-champagne-500/10">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-champagne-400" />
-                  <span className="text-sm font-medium text-ivory-100">Live Transcript</span>
-                </div>
-                {callState === 'active' && (
-                  <span className="flex items-center gap-1.5 text-xs text-emerald-400">
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block" />
-                    Recording
-                  </span>
-                )}
-              </div>
-
-              <div ref={transcriptRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-                {bubbles.length === 0 && (
-                  <div className="h-full flex flex-col items-center justify-center text-center text-gray-600">
-                    <Phone className="w-10 h-10 mb-3 opacity-20" />
-                    <p className="text-sm">Start a call to see the conversation here</p>
-                    {!assistantId && (
-                      <p className="text-xs mt-2 text-amber-500/70">
-                        ⚠ Set NEXT_PUBLIC_VAPI_ASSISTANT_ID in .env.local
-                      </p>
-                    )}
+                  {/* Wave bars icon */}
+                  <div className="flex items-end gap-0.5" style={{ height: 14 }}>
+                    {[6, 10, 14, 10, 6].map((h, i) => (
+                      <motion.div
+                        key={i}
+                        style={{ width: 3, height: h, borderRadius: 2, background: 'currentColor', opacity: 0.8 }}
+                        animate={isLive ? { scaleY: [1, 1.8, 1] } : { scaleY: 1 }}
+                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                      />
+                    ))}
                   </div>
-                )}
+                  {isLive ? 'End Call' : callState === 'connecting' ? 'Connecting…' : callState === 'ended' ? 'Wrapping Up…' : 'Start AI Voice Call'}
+                </button>
 
-                <AnimatePresence initial={false}>
-                  {bubbles.map(bubble => (
+                <p className="mt-3 text-[10px] flex items-center gap-1" style={{ color: '#475569' }}>
+                  <Zap className="w-3 h-3" />
+                  Powered by Advanced Voice AI
+                </p>
+
+                {/* Waveform */}
+                <div className="mt-5 w-full">
+                  <WaveformBars active={isLive} speaking={isSpeaking} />
+                </div>
+              </motion.div>
+
+              {/* ── Duration + Status ── */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Duration */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="p-4"
+                  style={{ background: 'rgba(11,18,32,0.85)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, backdropFilter: 'blur(20px)' }}
+                >
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Clock className="w-3.5 h-3.5" style={{ color: '#3B82F6' }} />
+                    <span className="text-[11px] font-medium" style={{ color: '#94A3B8' }}>Duration</span>
+                  </div>
+                  <p className="font-display font-black text-lg tabular-nums" style={{ color: '#F8FAFC' }}>
+                    {isLive ? formatDur(duration) : '00:00:00'}
+                  </p>
+                  <p className="text-[10px] mt-0.5" style={{ color: '#475569' }}>
+                    {isLive ? 'Active call' : 'Call not started'}
+                  </p>
+                </motion.div>
+
+                {/* Status */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="p-4"
+                  style={{ background: 'rgba(11,18,32,0.85)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, backdropFilter: 'blur(20px)' }}
+                >
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Activity className="w-3.5 h-3.5" style={{ color: '#22D3EE' }} />
+                    <span className="text-[11px] font-medium" style={{ color: '#94A3B8' }}>Status</span>
+                  </div>
+                  <p className="font-display font-bold text-lg capitalize" style={{ color: '#F8FAFC' }}>
+                    {isLive ? 'Active' : callState === 'connecting' ? 'Dialing' : callState === 'ended' ? 'Ending' : 'Idle'}
+                  </p>
+                  <p className="text-[10px] mt-0.5" style={{ color: '#475569' }}>
+                    {isLive ? 'AI speaking' : 'Agent is waiting'}
+                  </p>
+                </motion.div>
+              </div>
+
+              {/* ── AI Capabilities ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="p-5"
+                style={{ background: 'rgba(11,18,32,0.85)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, backdropFilter: 'blur(20px)' }}
+              >
+                <p className="text-sm font-semibold mb-4" style={{ color: '#F8FAFC' }}>AI Agent Capabilities</p>
+                <div className="space-y-2.5">
+                  {AI_CAPABILITIES.map((cap, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <cap.icon className="w-3.5 h-3.5 shrink-0" style={{ color: '#22D3EE' }} />
+                      <span className="text-xs" style={{ color: '#CBD5E1' }}>{cap.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Decorative AI orb */}
+                <div className="mt-5 flex justify-end">
+                  <div className="relative w-20 h-16">
+                    <div
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: 'radial-gradient(circle at 40% 50%, rgba(59,130,246,0.6), rgba(124,58,237,0.4), transparent)',
+                        filter: 'blur(8px)',
+                      }}
+                    />
                     <motion.div
-                      key={bubble.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className={`flex gap-3 ${bubble.speaker === 'User' ? 'flex-row-reverse' : ''}`}
-                    >
-                      {/* Avatar */}
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                        bubble.speaker === 'AI'
-                          ? 'bg-champagne-500/20 text-champagne-400'
-                          : 'bg-blue-500/20 text-blue-400'
-                      }`}>
-                        {bubble.speaker === 'AI'
-                          ? <Brain className="w-3.5 h-3.5" />
-                          : <User className="w-3.5 h-3.5" />}
-                      </div>
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: 'radial-gradient(circle at 40% 50%, rgba(34,211,238,0.3), transparent)',
+                      }}
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    {/* Mini wave bars on orb */}
+                    <div className="absolute inset-0 flex items-center justify-center gap-0.5">
+                      {[4, 8, 12, 10, 8, 12, 8, 5].map((h, i) => (
+                        <motion.div
+                          key={i}
+                          style={{ width: 2, borderRadius: 2, background: 'rgba(34,211,238,0.8)' }}
+                          animate={{ height: [`${h * 0.5}px`, `${h}px`, `${h * 0.5}px`] }}
+                          transition={{ duration: 0.8 + i * 0.1, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
 
-                      {/* Bubble */}
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                        bubble.speaker === 'AI'
-                          ? 'glass border border-champagne-500/10 text-gray-200 rounded-tl-sm'
-                          : 'bg-blue-500/15 border border-blue-500/20 text-gray-100 rounded-tr-sm'
-                      }`}>
-                        {bubble.text}
-                      </div>
-                    </motion.div>
+            {/* ════════════════════════════
+                RIGHT PANEL — Live Chat
+            ════════════════════════════ */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col"
+              style={{
+                background: 'rgba(11,18,32,0.85)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 20,
+                backdropFilter: 'blur(24px)',
+                minHeight: 520,
+              }}
+            >
+              {/* Chat header */}
+              <div
+                className="flex items-center justify-between px-5 py-4"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-8 h-8 rounded-xl flex items-center justify-center"
+                    style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}
+                  >
+                    <Activity className="w-4 h-4" style={{ color: '#3B82F6' }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: '#F8FAFC' }}>Live Conversation</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10B981' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse inline-block" />
+                  Live
+                </div>
+              </div>
+
+              {/* Messages area */}
+              <div
+                ref={transcriptRef}
+                className="flex-1 overflow-y-auto px-5 py-5 space-y-5"
+                style={{ minHeight: 0 }}
+              >
+                <AnimatePresence initial={false}>
+                  {bubbles.map(b => (
+                    <ChatBubble key={b.id} bubble={b} />
                   ))}
                 </AnimatePresence>
-              </div>
-            </div>
 
-            {/* Recent Calls */}
-            <div className="glass rounded-2xl border border-champagne-500/10">
-              <div className="px-5 py-4 border-b border-champagne-500/10 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-ivory-100">Recent Calls</h3>
+                {/* AI typing indicator */}
+                {isTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}>
+                      <Activity className="w-4 h-4" style={{ color: '#3B82F6' }} />
+                    </div>
+                    <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl" style={{ background: 'rgba(17,24,39,0.9)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                      <span className="text-[11px] mr-1" style={{ color: '#94A3B8' }}>AI Agent is typing</span>
+                      {[0, 0.15, 0.3].map((delay, i) => (
+                        <motion.span
+                          key={i}
+                          className="w-1.5 h-1.5 rounded-full inline-block"
+                          style={{ background: '#3B82F6' }}
+                          animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.2, 0.8] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay }}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Empty state */}
+                {bubbles.length === 0 && !isTyping && (
+                  <div className="h-full flex flex-col items-center justify-center text-center py-20">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                      <Phone className="w-8 h-8" style={{ color: '#3B82F6', opacity: 0.5 }} />
+                    </div>
+                    <p className="text-sm" style={{ color: '#475569' }}>Start a call to see the live conversation here</p>
+                  </div>
+                )}
+              </div>
+
+
+            </motion.div>
+          </div>
+
+          {/* ════════════════════════════
+              BOTTOM — Recent Calls Strip
+          ════════════════════════════ */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="mt-5"
+            style={{
+              background: 'rgba(11,18,32,0.85)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 20,
+              backdropFilter: 'blur(24px)',
+            }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-6 py-4"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4" style={{ color: '#22D3EE' }} />
+                <span className="font-semibold text-sm" style={{ color: '#F8FAFC' }}>Recent Calls</span>
+              </div>
+              <div className="flex items-center gap-3">
                 <button
                   onClick={loadLogs}
                   disabled={isLoadingLogs}
-                  className="text-gray-500 hover:text-champagne-400 transition-colors disabled:opacity-40"
+                  className="transition-colors disabled:opacity-40"
+                  style={{ color: '#475569' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#94A3B8')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
                 >
-                  <RefreshCw className={`w-4 h-4 ${isLoadingLogs ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingLogs ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                  className="flex items-center gap-1 text-xs font-medium transition-colors"
+                  style={{ color: '#22D3EE' }}
+                >
+                  View All Calls
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
                 </button>
               </div>
+            </div>
 
+            {/* Call cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 divide-x divide-white/5">
               {callLogs.length === 0 ? (
-                <div className="px-5 py-10 text-center text-gray-500 text-sm">
+                <div className="col-span-4 px-6 py-8 text-center text-sm" style={{ color: '#475569' }}>
                   {isLoadingLogs ? 'Loading…' : 'No calls recorded yet.'}
                 </div>
               ) : (
-                <div className="divide-y divide-champagne-500/5 max-h-72 overflow-y-auto">
-                  {callLogs.map((log, i) => (
+                callLogs.map((log, i) => {
+                  const { prefix, time } = fmtTime(log.created_at);
+                  const isCompleted = log.call_status === 'completed' || log.call_status === 'ended';
+                  const isMissed = log.call_status === 'missed';
+                  const statusColor = isCompleted ? '#10B981' : isMissed ? '#EF4444' : '#F59E0B';
+                  const statusLabel = isCompleted ? 'Completed' : isMissed ? 'Missed' : log.call_status;
+
+                  return (
                     <motion.div
                       key={log.id ?? log.call_id ?? i}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: i * 0.04 }}
-                      className="px-5 py-4 flex items-start gap-4 hover:bg-white/2 transition-colors"
+                      transition={{ delay: i * 0.06 }}
+                      className="flex items-start gap-4 px-5 py-5 transition-colors cursor-pointer"
+                      style={{ background: 'transparent' }}
+                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)')}
+                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
                     >
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                        log.call_status === 'completed' || log.call_status === 'ended' ? 'bg-emerald-500/10' :
-                        log.call_status === 'active' ? 'bg-amber-500/10' : 'bg-blue-500/10'
-                      }`}>
-                        <Phone className={`w-4 h-4 ${
-                          log.call_status === 'completed' || log.call_status === 'ended' ? 'text-emerald-400' :
-                          log.call_status === 'active' ? 'text-amber-400' : 'text-blue-400'
-                        }`} />
+                      {/* Icon */}
+                      <div
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5"
+                        style={{
+                          background: isCompleted ? 'rgba(16,185,129,0.1)' : isMissed ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                          border: `1px solid ${isCompleted ? 'rgba(16,185,129,0.2)' : isMissed ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                        }}
+                      >
+                        <Phone className="w-4 h-4" style={{ color: statusColor }} />
                       </div>
 
+                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm font-medium text-ivory-100 truncate">
-                            {log.customer_name || log.customer_phone || 'Unknown caller'}
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <p className="font-semibold text-sm truncate" style={{ color: '#F8FAFC' }}>
+                            {log.customer_name || log.customer_phone || 'Unknown'}
                           </p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ml-2 capitalize ${
-                            log.call_status === 'completed' || log.call_status === 'ended'
-                              ? 'bg-emerald-500/10 text-emerald-400'
-                              : log.call_status === 'active'
-                              ? 'bg-amber-500/10 text-amber-400'
-                              : 'bg-gray-500/10 text-gray-400'
-                          }`}>
-                            {log.call_status}
+                          <span className="text-[11px] tabular-nums shrink-0" style={{ color: '#94A3B8' }}>
+                            ⏱ {fmtCallDuration(log.duration_seconds)}
                           </span>
                         </div>
-
-                        {log.summary && (
-                          <p className="text-xs text-gray-500 line-clamp-2 mb-1">{log.summary}</p>
-                        )}
-                        {log.property_queried && (
-                          <p className="text-xs text-champagne-500/70 mb-1">🏠 {log.property_queried}</p>
-                        )}
-
-                        <p className="text-xs text-gray-600 flex items-center gap-2">
-                          <Clock className="w-3 h-3" />
-                          {new Date(log.created_at).toLocaleString('en-IN', {
-                            day: '2-digit', month: 'short', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit',
-                          })}
-                          {log.duration_seconds != null && (
-                            <span>· {Math.floor(log.duration_seconds / 60)}m {log.duration_seconds % 60}s</span>
-                          )}
+                        <p className="text-[11px] mb-1.5" style={{ color: '#475569' }}>
+                          {prefix}, {time}
                         </p>
+                        <span
+                          className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full"
+                          style={{
+                            background: isCompleted ? 'rgba(16,185,129,0.12)' : isMissed ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
+                            border: `1px solid ${isCompleted ? 'rgba(16,185,129,0.25)' : isMissed ? 'rgba(239,68,68,0.25)' : 'rgba(245,158,11,0.25)'}`,
+                            color: statusColor,
+                          }}
+                        >
+                          {statusLabel}
+                        </span>
                       </div>
                     </motion.div>
-                  ))}
-                </div>
+                  );
+                })
               )}
             </div>
-          </div>
+          </motion.div>
+
         </div>
       </div>
     </div>

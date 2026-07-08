@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
           <div className="text-center py-20 text-gray-500">Loading analytics…</div>
         ) : (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {kpis.map((kpi, i) => (
                 <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
                   className="glass rounded-2xl p-5 border border-champagne-500/10">

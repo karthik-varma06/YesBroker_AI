@@ -59,7 +59,7 @@ export default function CRMPage() {
           <p className="text-gray-400">Live data from Supabase — populated by your n8n Real Estate Voice Agent Pro workflow.</p>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((s, i) => (
             <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
               className="glass rounded-2xl p-5 border border-champagne-500/10">
@@ -72,7 +72,7 @@ export default function CRMPage() {
           ))}
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           {[
             { key: 'leads', label: 'Leads', count: leads.length },
             { key: 'calls', label: 'Call Logs', count: callLogs.length },
@@ -87,14 +87,14 @@ export default function CRMPage() {
         </div>
 
         {activeTab === 'leads' && (
-          <div className="flex gap-3 mb-5">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <div className="relative flex-1 w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search leads..."
                 className="w-full glass border border-champagne-500/10 focus:border-champagne-500/30 rounded-xl pl-10 pr-4 py-2.5 text-ivory-100 placeholder-gray-500 outline-none text-sm" />
             </div>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-              className="glass border border-champagne-500/10 rounded-xl px-4 py-2.5 text-sm text-ivory-100 outline-none bg-transparent">
+              className="glass border border-champagne-500/10 rounded-xl px-4 py-2.5 text-sm text-ivory-100 outline-none bg-transparent w-full sm:w-auto">
               {['all', 'hot', 'warm', 'cold', 'converted'].map(s => (
                 <option key={s} value={s} className="bg-obsidian-800 capitalize">{s === 'all' ? 'All Status' : s}</option>
               ))}
@@ -119,7 +119,7 @@ export default function CRMPage() {
                           {lead.name.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-1">
+                          <div className="flex flex-wrap items-center gap-3 mb-1">
                             <p className="text-sm font-semibold text-ivory-100">{lead.name}</p>
                             <span className={`text-xs px-2 py-0.5 rounded-full border font-medium uppercase ${STATUS_COLORS[lead.status] || STATUS_COLORS.cold}`}>
                               {lead.status}
@@ -157,11 +157,11 @@ export default function CRMPage() {
                             <Phone className="w-4 h-4 text-emerald-400" />
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                               <p className="text-sm font-medium text-ivory-100">
                                 {log.customer_name || log.customer_phone || 'Unknown caller'}
                               </p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 capitalize">{log.call_status}</span>
                                 {log.duration_seconds != null && (
                                   <span className="text-xs text-gray-500 flex items-center gap-1">
