@@ -51,7 +51,7 @@ export default function AdminPage() {
             </span>
           </div>
           <h1 className="text-4xl font-bold text-ivory-100 mt-2 mb-2">Admin Dashboard</h1>
-          <p className="text-gray-400">Platform management, user control, and system monitoring.</p>
+          <p className="text-gray-500">Platform management, user control, and system monitoring.</p>
         </motion.div>
 
         {/* System Status */}
@@ -77,7 +77,7 @@ export default function AdminPage() {
         <div className="flex flex-wrap gap-2 mb-6">
           {[['overview','Overview'],['users','User Management'],['logs','Activity Logs']].map(([key, label]) => (
             <button key={key} onClick={() => setActiveTab(key as any)}
-              className={`text-sm px-4 py-2.5 rounded-xl transition-all font-medium ${activeTab === key ? 'bg-champagne-500 text-obsidian-900' : 'glass border border-champagne-500/10 text-gray-400 hover:text-ivory-100'}`}>
+              className={`text-sm px-4 py-2.5 rounded-xl transition-all font-medium ${activeTab === key ? 'bg-champagne-500 text-obsidian-900' : 'glass border border-champagne-500/10 text-gray-500 hover:text-ivory-100'}`}>
               {label}
             </button>
           ))}
@@ -96,7 +96,7 @@ export default function AdminPage() {
                   { label: 'Monthly Revenue', value: 'AED 4.2M', change: '+28%' },
                 ].map(m => (
                   <div key={m.label} className="flex items-center justify-between py-2 border-b border-champagne-500/5">
-                    <span className="text-sm text-gray-400">{m.label}</span>
+                    <span className="text-sm text-gray-500">{m.label}</span>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-semibold text-ivory-100">{m.value}</span>
                       <span className="text-xs text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">{m.change}</span>
@@ -129,7 +129,7 @@ export default function AdminPage() {
           <div className="glass rounded-2xl border border-champagne-500/10 overflow-hidden">
             <div className="px-6 py-4 border-b border-champagne-500/10 flex items-center justify-between">
               <h3 className="text-sm font-medium text-ivory-100">Platform Users</h3>
-              <span className="text-xs text-gray-400">{users.length} total</span>
+              <span className="text-xs text-gray-500">{users.length} total</span>
             </div>
             <div className="divide-y divide-champagne-500/5">
               {users.map((user, i) => (
@@ -160,9 +160,9 @@ export default function AdminPage() {
               {activityLog.map((log, i) => (
                 <motion.div key={log.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i*0.05 }}
                   className="px-6 py-4 flex items-center gap-4 hover:bg-white/2 transition-colors">
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${EVENT_CONFIG[log.type] || 'text-gray-400'}`} style={{ background: 'currentColor' }} />
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${EVENT_CONFIG[log.type] || 'text-gray-500'}`} style={{ background: 'currentColor' }} />
                   <div className="flex-1">
-                    <p className="text-sm text-gray-300">{log.event}</p>
+                    <p className="text-sm text-gray-600">{log.event}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{log.user}</p>
                   </div>
                   <span className="text-xs text-gray-600">{log.time}</span>

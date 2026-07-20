@@ -1,12 +1,40 @@
 import type { Metadata } from "next";
+import { Geist, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
+import PageTransition from "@/components/layout/PageTransition";
+
+/* ═══════════════════════════════════════════════════
+   FONTS — redesign-plan.md Section 0.3
+   Geist (display) + Inter (body), both self-hosted via
+   next/font instead of Google Fonts <link> tags — no
+   external request, no preconnect needed, no layout
+   shift. Space Grotesk is fully retired site-wide.
+═══════════════════════════════════════════════════ */
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "YesBroker AI | Enterprise AI Real Estate Platform",
   description:
     "Enterprise-grade AI operating system for modern real estate. Voice agents, negotiation engine, and intelligent marketplace in one platform.",
-  keywords: ["AI real estate", "enterprise platform", "voice agent", "property AI", "Dubai real estate AI"],
+  keywords: [
+    "AI real estate",
+    "enterprise platform",
+    "voice agent",
+    "property AI",
+    "Dubai real estate AI",
+  ],
   openGraph: {
     title: "YesBroker AI | Enterprise AI Real Estate Platform",
     description: "Enterprise-grade AI operating system for modern real estate.",
@@ -14,25 +42,29 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+import GlobalBackground from "@/components/ui/GlobalBackground";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head suppressHydrationWarning>
-        {/* Google Fonts — Inter + Space Grotesk */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${geist.variable} ${inter.variable}`}
+    >
       <body
         className="min-h-screen"
-        style={{ background: "#050816", color: "#F8FAFC" }}
+        
         suppressHydrationWarning
       >
+        <GlobalBackground />
         <Navbar />
-        <main>{children}</main>
+        <main>
+          <PageTransition>{children}</PageTransition>
+        </main>
       </body>
     </html>
   );

@@ -1,183 +1,115 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  radius: number;
-  opacity: number;
-  pulse: number;
-  pulseSpeed: number;
-}
-
-interface Connection {
-  a: number;
-  b: number;
-}
-
-const COLORS = {
-  particlePrimary:   'rgba(59,130,246,',
-  particleSecondary: 'rgba(34,211,238,',
-  particleTertiary:  'rgba(124,58,237,',
-  lineColor:         'rgba(59,130,246,',
-  lineColorCyan:     'rgba(34,211,238,',
-};
+/**
+ * NeuralBackground → "Ambient Light Mesh"
+ *
+ * Pure CSS gradient blobs for ambient depth on a light canvas.
+ * Gold + sapphire only, very low opacity (4–8%), no purple.
+ * No canvas, no JS, renders on server, ships zero JavaScript.
+ *
+ * Export name unchanged so all import sites keep working.
+ */
 
 export default function NeuralBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  return (
+    <div className="liquid-mesh-bg" aria-hidden="true">
+      <span className="lm-blob lm-blob-gold" />
+      <span className="lm-blob lm-blob-sapphire" />
+      <span className="lm-blob lm-blob-warm" />
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      <style>{`
+        .liquid-mesh-bg {
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          pointer-events: none;
+          z-index: 0;
+        }
 
-    let raf: number;
-    let particles: Particle[] = [];
-    const PARTICLE_COUNT = typeof window !== 'undefined' && window.innerWidth < 768 ? 55 : 100;
-    const MAX_DIST = 160;
+        .lm-blob {
+          position: absolute;
+          border-radius: 50%;
+          will-change: transform;
+        }
 
-    function resize() {
-      if (!canvas) return;
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
+        .lm-blob-gold {
+          top: -10%;
+          left: -8%;
+          width: 60vmax;
+          height: 60vmax;
+          background: radial-gradient(
+            circle at 50% 50%,
+            rgba(184, 134, 11, 0.07) 0%,
+            rgba(184, 134, 11, 0.03) 35%,
+            transparent 70%
+          );
+          animation: lm-drift-a 34s ease-in-out infinite alternate;
+        }
 
-    // Initialise particles
-    function init() {
-      particles = [];
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const colorRoll = Math.random();
-        particles.push({
-          x: Math.random() * canvas!.width,
-          y: Math.random() * canvas!.height,
-          vx: (Math.random() - 0.5) * 0.35,
-          vy: (Math.random() - 0.5) * 0.35,
-          radius: Math.random() * 1.5 + 0.5,
-          opacity: Math.random() * 0.4 + 0.15,
-          pulse: Math.random() * Math.PI * 2,
-          pulseSpeed: Math.random() * 0.015 + 0.008,
-        });
-      }
-    }
-    init();
+        .lm-blob-sapphire {
+          bottom: -15%;
+          right: -10%;
+          width: 65vmax;
+          height: 65vmax;
+          background: radial-gradient(
+            circle at 50% 50%,
+            rgba(37, 99, 235, 0.06) 0%,
+            rgba(56, 189, 248, 0.03) 40%,
+            transparent 72%
+          );
+          animation: lm-drift-b 40s ease-in-out infinite alternate;
+        }
 
-    let time = 0;
+        .lm-blob-warm {
+          top: 30%;
+          left: 40%;
+          width: 50vmax;
+          height: 50vmax;
+          background: radial-gradient(
+            circle at 50% 50%,
+            rgba(245, 244, 240, 0.5) 0%,
+            rgba(244, 245, 248, 0.25) 45%,
+            transparent 75%
+          );
+          animation: lm-drift-c 46s ease-in-out infinite alternate;
+        }
 
-    function draw() {
-      if (!canvas || !ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      time++;
+        @keyframes lm-drift-a {
+          0%   { transform: translate(0, 0) scale(1); }
+          50%  { transform: translate(4vw, 3vh) scale(1.08); }
+          100% { transform: translate(-2vw, 5vh) scale(0.96); }
+        }
 
-      // ── Ambient aurora blobs ──
-      const grad1 = ctx.createRadialGradient(
-        canvas.width * 0.2, canvas.height * 0.2, 0,
-        canvas.width * 0.2, canvas.height * 0.2, canvas.width * 0.45
-      );
-      grad1.addColorStop(0, `rgba(59,130,246,${0.04 + Math.sin(time * 0.008) * 0.02})`);
-      grad1.addColorStop(1, 'transparent');
-      ctx.fillStyle = grad1;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        @keyframes lm-drift-b {
+          0%   { transform: translate(0, 0) scale(1); }
+          50%  { transform: translate(-5vw, -3vh) scale(1.06); }
+          100% { transform: translate(2vw, -4vh) scale(0.97); }
+        }
 
-      const grad2 = ctx.createRadialGradient(
-        canvas.width * 0.8, canvas.height * 0.7, 0,
-        canvas.width * 0.8, canvas.height * 0.7, canvas.width * 0.4
-      );
-      grad2.addColorStop(0, `rgba(124,58,237,${0.035 + Math.sin(time * 0.006 + 1) * 0.015})`);
-      grad2.addColorStop(1, 'transparent');
-      ctx.fillStyle = grad2;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        @keyframes lm-drift-c {
+          0%   { transform: translate(-50%, -50%) scale(1); }
+          50%  { transform: translate(-46%, -54%) scale(1.05); }
+          100% { transform: translate(-53%, -48%) scale(0.98); }
+        }
 
-      const grad3 = ctx.createRadialGradient(
-        canvas.width * 0.5, canvas.height * 0.45, 0,
-        canvas.width * 0.5, canvas.height * 0.45, canvas.width * 0.35
-      );
-      grad3.addColorStop(0, `rgba(34,211,238,${0.025 + Math.sin(time * 0.01 + 2) * 0.01})`);
-      grad3.addColorStop(1, 'transparent');
-      ctx.fillStyle = grad3;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // ── Move particles ──
-      particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.pulse += p.pulseSpeed;
-
-        if (p.x < -5)             p.x = canvas!.width  + 5;
-        if (p.x > canvas!.width  + 5) p.x = -5;
-        if (p.y < -5)             p.y = canvas!.height + 5;
-        if (p.y > canvas!.height + 5) p.y = -5;
-      });
-
-      // ── Draw connections ──
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < MAX_DIST) {
-            const alpha = (1 - dist / MAX_DIST) * 0.18;
-            // Alternate between blue and cyan for lines
-            const useCyan = (i + j) % 5 === 0;
-            ctx.beginPath();
-            ctx.strokeStyle = useCyan
-              ? `rgba(34,211,238,${alpha})`
-              : `rgba(59,130,246,${alpha * 0.9})`;
-            ctx.lineWidth = 0.6;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
+        @media (prefers-reduced-motion: reduce) {
+          .lm-blob {
+            animation: none !important;
           }
         }
-      }
 
-      // ── Draw particles ──
-      particles.forEach((p, i) => {
-        const pulsingOpacity = p.opacity * (0.7 + 0.3 * Math.sin(p.pulse));
-        // Color variety
-        let colorStr: string;
-        if (i % 7 === 0)      colorStr = `rgba(34,211,238,${pulsingOpacity})`;
-        else if (i % 11 === 0) colorStr = `rgba(124,58,237,${pulsingOpacity * 0.8})`;
-        else                   colorStr = `rgba(59,130,246,${pulsingOpacity})`;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = colorStr;
-        ctx.fill();
-
-        // Glow for larger nodes
-        if (p.radius > 1.4) {
-          const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * 5);
-          grd.addColorStop(0, `rgba(59,130,246,${pulsingOpacity * 0.25})`);
-          grd.addColorStop(1, 'transparent');
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius * 5, 0, Math.PI * 2);
-          ctx.fillStyle = grd;
-          ctx.fill();
+        @media (max-width: 640px) {
+          .lm-blob-warm {
+            display: none;
+          }
+          .lm-blob-gold,
+          .lm-blob-sapphire {
+            width: 70vmax;
+            height: 70vmax;
+            opacity: 0.85;
+          }
         }
-      });
-
-      raf = requestAnimationFrame(draw);
-    }
-
-    draw();
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="neural-canvas"
-      style={{ opacity: 0.85 }}
-    />
+      `}</style>
+    </div>
   );
 }

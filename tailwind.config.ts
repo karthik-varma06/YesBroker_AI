@@ -1,5 +1,42 @@
 import type { Config } from "tailwindcss";
 
+/* ═══════════════════════════════════════════════════
+   Liquid Glass token values — LIGHT THEME
+   Kept in sync with the :root block in app/globals.css.
+   Defined once here so champagne/ivory/obsidian (legacy,
+   still referenced by pages pending migration) and
+   gold/surface/sapphire (go-forward) share one set
+   of hex values.
+═══════════════════════════════════════════════════ */
+
+const surfaces = {
+  void: "#FFFFFF",
+  deep: "#F4F5F8",
+  surface: "#FFFFFF",
+  elevated: "#FFFFFF",
+};
+
+const gold = {
+  300: "#F3DFA0",
+  400: "#C9A227",
+  500: "#B8860C",
+  600: "#96700A",
+  700: "#6B5410",
+};
+
+const sapphire = {
+  400: "#38BDF8",
+  500: "#2563EB",
+  600: "#1D4ED8",
+};
+
+const ivory = {
+  50: "#FAFAF9",
+  100: "#F5F5F4",
+  200: "#E7E5E4",
+  300: "#D6D3D1",
+};
+
 const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,51 +46,87 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Legacy
+        /* ── Legacy semantic names ──
+           Still used directly by crm, analytics, negotiation,
+           deal-room, admin, site-visits, whatsapp, and property/[id].
+           Aliased onto the gold/surface constants above. */
         ivory: {
-          50: "#FDFCF8",
-          100: "#FAF8F0",
-          200: "#F5F0E0",
-          300: "#EDE5C8",
+          50: ivory[50],
+          100: ivory[100],
+          200: ivory[200],
+          300: ivory[300],
         },
         champagne: {
-          300: "#F5E6C0",
-          400: "#EDD48A",
-          500: "#D4AF37",
-          600: "#B8960C",
-          700: "#8B6914",
+          300: gold[300],
+          400: gold[400],
+          500: gold[500],
+          600: gold[600],
+          700: gold[700],
         },
         obsidian: {
-          900: "#0A0A0F",
-          800: "#12121A",
-          700: "#1A1A28",
-          600: "#222235",
+          900: surfaces.void,
+          800: surfaces.deep,
+          700: surfaces.surface,
+          600: surfaces.elevated,
         },
-        // New luxury tokens
+
+        /* ── Liquid Glass token system (go-forward) ── */
+        void: surfaces.void,
         bg: {
-          deep:    "#050816",
-          surface: "#0B1220",
-          card:    "#111827",
+          deep: surfaces.deep,
+          surface: surfaces.surface,
+          elevated: surfaces.elevated,
+        },
+        gold: {
+          300: gold[300],
+          400: gold[400],
+          500: gold[500],
+          600: gold[600],
+          700: gold[700],
+        },
+        sapphire: {
+          400: sapphire[400],
+          500: sapphire[500],
+          600: sapphire[600],
         },
         brand: {
-          blue:   "#3B82F6",
-          cyan:   "#22D3EE",
-          purple: "#7C3AED",
+          gold: gold[500],
+          sapphire: sapphire[500],
         },
         ui: {
-          success: "#10B981",
-          warning: "#F59E0B",
-          text:    "#F8FAFC",
-          muted:   "#94A3B8",
+          success: "#16A34A",
+          warning: "#D97706",
+          danger: "#DC2626",
+          text: "#10131A",
+          muted: "#545B6B",
         },
       },
       fontFamily: {
-        display: ["Space Grotesk", "Inter", "sans-serif"],
-        body:    ["Inter", "-apple-system", "sans-serif"],
-      },
+  display: ["var(--font-geist)", "-apple-system", "sans-serif"],
+  body: ["Inter", "-apple-system", "sans-serif"],
+},
       borderRadius: {
         "4xl": "2rem",
         "5xl": "2.5rem",
+        // Liquid Glass radius scale
+        "glass-sm": "12px",
+        "glass-md": "16px",
+        "glass-lg": "20px",
+        "glass-xl": "28px",
+      },
+      boxShadow: {
+        // Liquid Glass elevation shadow scale — light, soft, diffused
+        "glass-1": "0 1px 2px rgba(15,23,42,0.04), 0 12px 32px rgba(15,23,42,0.07)",
+        "glass-2": "0 20px 50px rgba(15,23,42,0.10), 0 0 0 1px rgba(15,23,42,0.04)",
+        "glass-3": "0 30px 80px rgba(15,23,42,0.16), 0 0 0 1px rgba(15,23,42,0.05)",
+        "gold-glow": "0 0 20px rgba(184,134,11,0.15)",
+        "sapphire-glow": "0 0 20px rgba(37,99,235,0.15)",
+      },
+      backdropBlur: {
+        xs: "2px",
+        "glass-1": "20px",
+        "glass-2": "32px",
+        "glass-3": "40px",
       },
       animation: {
         "aurora":        "aurora 8s ease-in-out infinite alternate",
@@ -104,8 +177,8 @@ const config: Config = {
           "100%": { backgroundPosition: "200% 0" },
         },
         "pulse-glow-blue": {
-          "0%, 100%": { boxShadow: "0 0 20px rgba(59,130,246,0.3)" },
-          "50%":      { boxShadow: "0 0 40px rgba(59,130,246,0.6), 0 0 80px rgba(59,130,246,0.2)" },
+          "0%, 100%": { boxShadow: "0 0 16px rgba(37,99,235,0.18)" },
+          "50%":      { boxShadow: "0 0 28px rgba(37,99,235,0.35), 0 0 56px rgba(37,99,235,0.12)" },
         },
         "spin-slow": {
           from: { transform: "rotate(0deg)" },
@@ -133,9 +206,6 @@ const config: Config = {
           "50%":      { opacity: "0.5", transform: "scale(0.98) translate(-1%, 2%)" },
           "75%":      { opacity: "0.7", transform: "scale(1.03) translate(1%, -1%)" },
         },
-      },
-      backdropBlur: {
-        xs: "2px",
       },
     },
   },
