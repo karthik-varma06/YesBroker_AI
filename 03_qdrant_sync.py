@@ -47,7 +47,7 @@ except ImportError:
 # ──────────────────────────────────────────────────────────────
 # CREDENTIALS  (loaded from env)
 # ──────────────────────────────────────────────────────────────
-SUPABASE_URL     = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://jxtvhamxawtfkwprpeei.supabase.co")
+SUPABASE_URL     = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://lawxsmqmztpyjcqenudp.supabase.co")
 SUPABASE_KEY     = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 GEMINI_API_KEY   = os.environ.get("GEMINI_API_KEY", "")

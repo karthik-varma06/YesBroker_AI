@@ -422,6 +422,45 @@ function fmtCallDuration(s?: number) {
   return `${m}:${sec}`;
 }
 
+function getErrorMessage(input: unknown): string {
+  if (typeof input === "string") return input;
+  if (input instanceof Error) return input.message;
+  if (input && typeof input === "object") {
+    const candidate = input as {
+      message?: unknown;
+      error?: unknown;
+      errorMsg?: unknown;
+    };
+    if (typeof candidate.message === "string") return candidate.message;
+    if (typeof candidate.error === "string") return candidate.error;
+    if (candidate.error instanceof Error) return candidate.error.message;
+    if (typeof candidate.errorMsg === "string") return candidate.errorMsg;
+    try {
+      return JSON.stringify(input);
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+
+function isIgnorableVoiceAgentError(args: unknown[]) {
+  const message = args.map(getErrorMessage).join(" ").toLowerCase();
+  if (!message) return false;
+
+  // These are normal Daily.js / Vapi WebRTC teardown messages — not real errors.
+  // "meeting ended due to ejection" fires when Daily destroys the call room;
+  // it is expected on every normal call end and must not reach the error overlay.
+  return [
+    "send transport changed to disconnected",
+    "recv transport changed to disconnected",
+    "meeting ended in error: meeting has ended",
+    "meeting ended due to ejection",
+    "error unloading krisp processor",
+    "wasm_or_worker_not_ready",
+  ].some((needle) => message.includes(needle));
+}
+
 /* ════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════ */
@@ -438,6 +477,9 @@ export default function VoiceAgentPage() {
   const vapiRef = useRef<unknown>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const bubbleIdCounter = useRef(10);
+  // Prevents the call-end event handler and endCall() from both scheduling
+  // a setTimeout(→idle) at the same time, which corrupts the next call's state.
+  const callEndHandledRef = useRef(false);
 
   const apiKey = process.env.NEXT_PUBLIC_VAPI_API_KEY ?? "";
   const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID ?? "";
@@ -461,21 +503,17 @@ export default function VoiceAgentPage() {
     loadLogs();
   }, [loadLogs]);
 
-  /* ── Suppress Daily.js internal disconnect errors ── */
+  // Filter expected, non-fatal Daily.js WebRTC transport teardown logs during voice-agent page lifecycle
   useEffect(() => {
-    const originalConsoleError = console.error;
-    console.error = (...args: any[]) => {
-      const msg = typeof args[0] === "string" ? args[0] : "";
-      if (
-        msg.includes("send transport changed to disconnected") ||
-        msg.includes("recv transport changed to disconnected")
-      ) {
-        return; // Ignore harmless WebRTC disconnect logs
+    const origError = console.error;
+    console.error = (...args: unknown[]) => {
+      if (isIgnorableVoiceAgentError(args)) {
+        return;
       }
-      originalConsoleError.apply(console, args);
+      origError.apply(console, args);
     };
     return () => {
-      console.error = originalConsoleError;
+      console.error = origError;
     };
   }, []);
 
@@ -493,7 +531,6 @@ export default function VoiceAgentPage() {
     }
   }, [bubbles]);
 
-  /* ── Timer ── */
   useEffect(() => {
     let t: NodeJS.Timeout;
     if (callState === "active")
@@ -502,7 +539,7 @@ export default function VoiceAgentPage() {
     return () => clearInterval(t);
   }, [callState]);
 
-  /* ── Cleanup ── */
+  /* ── Cleanup on page unmount ── */
   useEffect(() => {
     return () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -513,6 +550,7 @@ export default function VoiceAgentPage() {
         } catch {
           /* noop */
         }
+        vapiRef.current = null;
       }
     };
   }, []);
@@ -553,6 +591,7 @@ export default function VoiceAgentPage() {
       );
       return;
     }
+    callEndHandledRef.current = false;
     setCallState("connecting");
     setBubbles([]);
     try {
@@ -566,9 +605,18 @@ export default function VoiceAgentPage() {
         
         vapi.on("call-start", () => setCallState("active"));
         vapi.on("call-end", () => {
+          // Guard: if endCall() already initiated this transition, skip.
+          if (callEndHandledRef.current) return;
+          callEndHandledRef.current = true;
           setCallState("ended");
           setIsSpeaking(false);
+          // Null the ref so the NEXT call creates a brand-new Vapi+Daily.js instance.
+          // This is the correct fix for "Meeting ended due to ejection" on second calls:
+          // Daily.js emits that error when a new call is started on a reused instance
+          // whose internal Daily call object wasn't fully torn down.
+          vapiRef.current = null;
           setTimeout(() => {
+            callEndHandledRef.current = false;
             setCallState("idle");
             loadLogs();
           }, 3500);
@@ -591,26 +639,68 @@ export default function VoiceAgentPage() {
             }
           },
         );
+        // Vapi v2: error event fires for mid-call errors
         vapi.on("error", (err: any) => {
-          console.error("Vapi error details:", err);
-          let errorMessage = "Voice connection error. Check microphone permissions and Vapi Dashboard logs.";
-          
-          if (err && typeof err === "object") {
-             if (err.message) errorMessage = err.message;
-             else if (err.error?.message) errorMessage = err.error.message;
-             else if (Object.keys(err).length > 0) errorMessage = JSON.stringify(err);
-          } else if (typeof err === "string") {
-             errorMessage = err;
+          const message = getErrorMessage(err).trim();
+          const lowerMessage = message.toLowerCase();
+          if (
+            !message ||
+            lowerMessage === "{}" ||
+            lowerMessage === "[object object]" ||
+            lowerMessage.includes("meeting has ended") ||
+            lowerMessage.includes("disconnected") ||
+            lowerMessage.includes("krisp")
+          ) {
+            return;
           }
-          
+          console.warn("Vapi error event:", err);
+          // Vapi v2 error shape: { type: string, error: { message, name, stack, ... } }
+          // or sometimes a plain string / Error instance
+          let errorMessage =
+            "Voice connection error. Check microphone permissions and Vapi Dashboard logs.";
+          if (typeof err === "string") {
+            errorMessage = err;
+          } else if (err instanceof Error) {
+            errorMessage = err.message;
+          } else if (err && typeof err === "object") {
+            // Preferred: nested .error.message (Vapi v2 serializeError shape)
+            const nested = err.error;
+            if (typeof nested === "string") errorMessage = nested;
+            else if (nested?.message) errorMessage = String(nested.message);
+            else if (err.message) errorMessage = String(err.message);
+            else if (err.errorMsg) errorMessage = String(err.errorMsg);
+            else errorMessage = JSON.stringify(err);
+          }
           setVapiError(errorMessage);
           setCallState("idle");
         });
+
+        // Vapi v2: call-start-failed fires when startup fails BEFORE call-start.
+        // evt.error is a plain string per the SDK type definition.
+        vapi.on("call-start-failed", (evt: any) => {
+          console.warn("Vapi call-start-failed:", evt);
+          // Extract the error string directly — evt.error is a string in the SDK.
+          const errorStr: string =
+            typeof evt?.error === "string"
+              ? evt.error
+              : evt?.error?.message
+                ? String(evt.error.message)
+                : `Call start failed at stage: ${evt?.stage ?? "unknown"}`;
+          setVapiError(errorStr);
+          setCallState("idle");
+        });
+
+        // Vapi v2: log success for debugging
+        vapi.on("call-start-success", (evt: any) => {
+          console.log("Vapi call-start-success:", evt);
+        });
       }
-      
+
       await vapi.start(assistantId);
     } catch (err) {
-      console.error(err);
+      if (!isIgnorableVoiceAgentError([err])) {
+        console.warn(err);
+      }
       setVapiError(
         "Failed to start call. Check your Vapi API key and assistant ID.",
       );
@@ -622,16 +712,25 @@ export default function VoiceAgentPage() {
   const endCall = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const v = vapiRef.current as any;
+    // Mark as handled so the 'call-end' event handler (fired by stop()) doesn't
+    // create a second parallel setTimeout(→idle). We drive the transition here.
+    callEndHandledRef.current = true;
     if (v) {
       try {
+        // stop() is async but we don't await — the UI updates immediately.
+        // The SDK will fire 'call-end' internally, which we suppress via the ref.
         v.stop();
       } catch {
         /* noop */
       }
+      // Null the instance so the next call gets a fresh Vapi+Daily.js object,
+      // preventing "Meeting ended due to ejection" on subsequent calls.
+      vapiRef.current = null;
     }
     setCallState("ended");
     setIsSpeaking(false);
     setTimeout(() => {
+      callEndHandledRef.current = false;
       setCallState("idle");
       loadLogs();
     }, 3500);
@@ -692,7 +791,8 @@ export default function VoiceAgentPage() {
               }}
             >
               <AlertCircle className="w-4 h-4 shrink-0" />
-              {vapiError}
+              {/* Always render vapiError as a string to prevent React "Objects not valid as React child" crash */}
+              {typeof vapiError === "string" ? vapiError : JSON.stringify(vapiError)}
             </motion.div>
           )}
         </div>

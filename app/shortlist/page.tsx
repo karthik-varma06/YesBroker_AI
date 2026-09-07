@@ -29,9 +29,10 @@ export default function ShortlistPage() {
     fetch("/api/properties", { cache: "no-store" })
       .then((r) => r.json())
       .then((d: UIProperty[]) => {
+        const isProd = typeof process !== "undefined" && process.env && process.env.NODE_ENV === "production";
         if (Array.isArray(d) && d.length) {
           setAllProperties(d);
-        } else {
+        } else if (!isProd) {
           setAllProperties(
             demoProperties.map((p) => ({
               id: p.id,
@@ -49,6 +50,8 @@ export default function ShortlistPage() {
               investment_score: p.investment_score ?? 80,
             })),
           );
+        } else {
+          setAllProperties([]);
         }
       })
       .catch(() => {})

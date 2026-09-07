@@ -18,7 +18,7 @@ import {
   Sparkles,
   Calculator,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, demoProperties } from "@/lib/utils";
 import type { UIProperty } from "@/lib/mappers";
 import PropertyCard from "@/components/property/PropertyCard";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
@@ -120,7 +120,36 @@ export default function PropertyPage({
     fetch(`/api/properties?id=${encodeURIComponent(id)}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
-        if (d?.id) setProperty(d);
+        const isProd = typeof process !== "undefined" && process.env && process.env.NODE_ENV === "production";
+        if (d?.id) {
+          setProperty(d);
+        } else if (!isProd) {
+          // In development, allow demoProperties to act as a fallback so
+          // clicking mock cards shows a detail page locally.
+          const demo = demoProperties.find((p) => String(p.id) === String(id));
+          if (demo) {
+            setProperty({
+              id: demo.id,
+              title: demo.title,
+              description: demo.description,
+              location: `${demo.area}, ${demo.city}`,
+              area: demo.area ?? "",
+              city: demo.city,
+              property_type: demo.property_type,
+              price: demo.price,
+              currency: demo.currency,
+              amenities: [] as string[],
+              featured: demo.featured ?? false,
+              status: demo.status ?? "available",
+              investment_score: demo.investment_score ?? 80,
+              minimum_price: 0,
+              availability_status: demo.status ?? "available",
+              builder_details: "",
+              possession_date: "",
+              rera_number: "",
+            } as UIProperty);
+          }
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));

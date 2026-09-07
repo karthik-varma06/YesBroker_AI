@@ -91,9 +91,12 @@ export default function MarketplacePage() {
     fetch("/api/properties", { cache: "no-store" })
       .then((r) => r.json())
       .then((d: UIProperty[]) => {
+        // Use Supabase as the single source of truth in production.
+        // Only fall back to demo/mock data during development.
+        const isProd = typeof process !== "undefined" && process.env && process.env.NODE_ENV === "production";
         if (Array.isArray(d) && d.length) {
           setProperties(d);
-        } else {
+        } else if (!isProd) {
           setProperties(
             demoProperties.map((p) => ({
               id: p.id,
@@ -111,6 +114,9 @@ export default function MarketplacePage() {
               investment_score: p.investment_score ?? 80,
             })),
           );
+        } else {
+          // In production, prefer an empty list over showing mismatched mock data.
+          setProperties([]);
         }
       })
       .catch(() => {})
