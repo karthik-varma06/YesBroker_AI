@@ -1,87 +1,235 @@
-# YesBroker — AI Estate OS (Frontend Prototype)
+# YesBroker — AI Estate OS
 
-A luxury, AI-first real estate operating system frontend built on top of your existing backend (Vapi, n8n, Gemini, Qdrant, Supabase, Twilio). This is the **frontend only** — no backend logic was rebuilt or modified.
+YesBroker is an AI-first real estate operating system built with Next.js and connected to a real backend stack including Supabase, Vapi, n8n, Gemini, Qdrant, and Twilio.
+
+The application provides a real-estate marketplace, property discovery, AI voice assistance, negotiation, CRM, analytics, site-visit management, WhatsApp integration, and related dashboards.
 
 ## Tech Stack
-- Next.js 15 (App Router) + TypeScript
-- Tailwind CSS v4
-- Framer Motion (animations, aurora background, floating cards)
-- Lucide React (icons)
-- Recharts (analytics dashboard)
-- Supabase JS client (wired to your existing project)
 
-## Getting Started
+- Next.js 15 (App Router)
+- TypeScript
+- Tailwind CSS v4
+- Framer Motion
+- Lucide React
+- Recharts
+- Supabase
+- Vapi
+- n8n
+- Google Gemini
+- Qdrant
+- Twilio / WhatsApp
+
+## 1. Requirements
+
+Install the following before starting:
+
+- Node.js
+- npm
+- Git
+
+You also need access to the required external services and credentials:
+
+- Supabase
+- Vapi
+- n8n
+- Qdrant
+- Google Gemini
+- Twilio / WhatsApp (when enabled)
+
+## 2. Clone the Project
+
+Clone the repository:
+
+```bash
+git clone https://github.com/karthik-varma06/YesBroker_AI.git
+```
+
+Enter the project:
+
+```bash
+cd YesBroker_AI.git
+```
+
+Install dependencies:
 
 ```bash
 npm install
+```
+
+## 3. Configure Environment Variables
+
+The repository contains:
+
+```text
+.env.example
+```
+
+This file contains the required environment variable names only.
+
+Create your local environment file from the example.
+
+### Windows PowerShell
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+## 4. Run the Application
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000
+Open:
 
-To build for production:
+```text
+http://localhost:3000
+```
+
+## 7. AI Voice Agent
+
+Open:
+
+```text
+http://localhost:3000/voice-agent
+```
+
+The voice agent uses Vapi and connects to backend automation through n8n.
+
+The voice flow supports:
+
+- Requirement collection
+- Lead capture
+- Property search
+- Property details
+- Price negotiation
+- Site-visit booking
+- Human handoff
+- Conversation completion
+
+## 8. Voice Agent Test Script
+
+Use a fresh voice call and test the following scenarios.
+
+### Test 1 — Property Requirement
+
+Say:
+
+> Hi, my name is Karthikeya. I'm looking for a 2BHK apartment in Whitefield, Bangalore with a budget of 85 lakhs and I will require a home loan.
+
+Expected:
+
+The agent should understand the requirement and collect the necessary contact information.
+
+### Test 2 — Property Search
+
+Say:
+
+> Can you show me the best properties available in Whitefield within my budget and tell me their amenities?
+
+Expected:
+
+The agent should retrieve real property options through the property-search workflow and provide their relevant details and amenities.
+
+### Test 3 — Price Negotiation
+
+Say:
+
+> I like the property, but instead of 85 lakhs I can only offer 78 lakhs. Is there any flexibility in the price?
+
+Expected:
+
+The agent should process the negotiation request through the negotiation workflow.
+
+### Test 4 — Site Visit
+
+Say:
+
+> That sounds reasonable. I'd like to schedule a site visit on June 25th at 11:00 AM.
+
+Expected:
+
+The agent should process the site-visit request and collect any information required for booking.
+
+### Test 5 — Human Handoff
+
+Say:
+
+> Before I decide, I'd like to speak with a senior property consultant directly.
+
+Expected:
+
+The agent should trigger the human handoff flow.
+
+### Test 6 — End Conversation
+
+Say:
+
+> Thank you for all the information. That's all I needed today.
+
+Expected:
+
+The agent should end the conversation normally.
+
+## 9. Backend Architecture
+
+The main architecture is:
+
+```text
+Next.js Application
+        |
+        +---- Supabase
+        |       └── Application data
+        |
+        +---- Vapi
+        |       └── AI voice conversations
+        |
+        +---- n8n
+        |       └── Backend automation / tools
+        |
+        +---- Gemini
+        |       └── AI / embedding tasks
+        |
+        +---- Qdrant
+        |       └── Vector property search
+        |
+        └---- Twilio
+                └── WhatsApp integration
+```
+
+The frontend, external services, and automation workflows work together as one system.
+
+## 10. Property Data and Qdrant
+
+Property data is stored in Supabase.
+
+The Qdrant collection used for property retrieval is:
+
+```text
+real_estate_kb
+```
+
+The project contains:
+
+```text
+03_qdrant_sync.py
+```
+
+This script synchronizes property data from Supabase into Qdrant.
+
+Run it only when the property knowledge base needs to be synchronized:
+
 ```bash
-npm run build
-npm start
+python 03_qdrant_sync.py
 ```
 
-## Project Structure
 
-```
-app/
-  page.tsx                  Homepage (hero, AI search, featured properties, stats)
-  marketplace/page.tsx      Property marketplace with filters
-  property/[id]/page.tsx    Property detail page (AI investment score, booking)
-  search/page.tsx           ChatGPT-style AI Property Discovery (RAG)
-  voice-agent/page.tsx      Vapi AI Voice Agent center (live call demo, transcript, lead capture)
-  negotiation/page.tsx      AI Negotiation Center (counter-offer engine)
-  crm/page.tsx               CRM Dashboard (leads, calls, visits)
-  analytics/page.tsx         Analytics Dashboard (Recharts: trends, funnel, sentiment)
-  site-visits/page.tsx       Site Visit Dashboard (upcoming/completed/cancelled)
-  whatsapp/page.tsx          WhatsApp Dashboard (Twilio conversation view)
-  deal-room/page.tsx         Deal Room (timeline, documents — demo data)
-  admin/page.tsx             Admin Panel (users, system status, activity log)
-  api/                       API routes (properties, leads, ai/search, ai/negotiate, analytics, calls, site-visit)
-lib/
-  supabase.ts                Supabase client (pre-wired to your project URL)
-  utils.ts                   Helpers + demo/fallback data
-components/
-  layout/Navbar.tsx          Main navigation with dashboard dropdown
-```
 
-## Connecting to Your Real Backend
 
-### 1. Supabase
-`lib/supabase.ts` already points at your Supabase project (from your screenshot: `whatsapp_messages`, `leads`, `call_logs`, `site_visits`, `properties`, `call_analytics`). API routes in `app/api/*` query Supabase first and fall back to demo data if a table is empty or the query fails — so the UI never looks broken during a live demo, but shows real data the moment your tables are populated.
 
-To use your own keys via environment variables instead of the hardcoded fallback:
-```
-NEXT_PUBLIC_SUPABASE_URL=your_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-```
-Then update `lib/supabase.ts` to read from `process.env`.
 
-### 2. Vapi Voice Agent (/voice-agent)
-The page currently simulates a call with a scripted transcript so it looks great in demos with zero setup. To wire it to your real Vapi assistant:
-- `npm install @vapi-ai/web`
-- In `app/voice-agent/page.tsx`, replace the simulated `startCall`/`endCall` logic with real Vapi SDK calls (`vapi.start(assistantId)`, listen to `vapi.on('message', ...)` for live transcript events instead of the scripted array).
-- Your n8n webhook ("Vapi Webhook" node) already handles call-started, lead-capture, property-query, negotiate, book-visit, handoff, and call-end events.
 
-### 3. AI Property Search (/search)
-`app/api/ai/search/route.ts` does simple keyword matching on demo properties. To connect to your real RAG pipeline (Gemini Embed -> Qdrant -> Gemini Property Answer), point this route at your n8n webhook URL for the property-query branch of your workflow.
 
-### 4. AI Negotiation (/negotiation)
-`app/api/ai/negotiate/route.ts` runs a ratio-based heuristic so the demo always returns sensible results instantly. To connect to your real Gemini Negotiate workflow, replace the heuristic with a fetch call to your n8n negotiate webhook branch.
 
-### 5. WhatsApp (/whatsapp)
-Currently shows demo conversation data. Wire a new `app/api/whatsapp/route.ts` to query your `whatsapp_messages` Supabase table, and use Twilio (or your existing n8n WhatsApp nodes) for sending.
-
-## Design System
-- Colors: Ivory/champagne gold palette over a near-black obsidian background (tailwind.config.ts)
-- Glassmorphism: `.glass` and `.glass-strong` utility classes in globals.css
-- Effects: Aurora background gradients, floating animated cards, gradient gold text, shimmer loading states
-- All demo/mock data lives in `lib/utils.ts` — replace or extend as needed.
-
-## Notes
-- Every dashboard/API route gracefully falls back to realistic demo data if your Supabase tables are empty — the prototype is always demo-ready, and will automatically "go live" as you populate real data with zero frontend code changes required.
-- No backend workflows, Supabase schema, or n8n logic were modified — this is purely the frontend layer described in your spec.
